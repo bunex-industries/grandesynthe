@@ -526,6 +526,7 @@ function addElement(type) {
 
 function addPattern(patternName) {
 	addElement("VCO");
+<<<<<<< HEAD
 	ELEMENTS.push(element);
 
 	addElement("VCA_HI");
@@ -536,6 +537,21 @@ function addPattern(patternName) {
 
 	addElement("MIX");
 
+=======
+	var vco1 = ELEMENTS[ELEMENTS.length -1]; 
+		
+	addElement("VCA_HI");
+	var vca1 = ELEMENTS[ELEMENTS.length -1];
+	
+	addElement("VCO");
+	var vco2 = ELEMENTS[ELEMENTS.length -1];
+	
+	addElement("VCF");
+	var vcf1 = ELEMENTS[ELEMENTS.length -1];
+	
+	addElement("MIX");
+	var mix1 = ELEMENTS[ELEMENTS.length -1];
+>>>>>>> a37ee84eb2aca0c0442c1ed66a274c7c50f59542
 }
 
 function deleteElement()

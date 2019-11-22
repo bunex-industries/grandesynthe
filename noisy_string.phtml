@@ -1,0 +1,325 @@
+<h2>Corde bruyante</h2>
+
+		<button onClick="audioContext.resume();" style="background-color:cyan; margin-top:20px;">Start Audio</button>
+		<br></br>
+		<label>Nombre <input 		onchange="updateSettings(); initNodes();" type="number" value="64" 		id="nombre" 	step="1"></label>
+		<br></br>
+		<label>Afficher points <input onchange="updateSettings();" type="checkbox"  id="showPoints" checked></label>	
+		<label>Point fixe <input onchange="setPinned(this.checked);" id="pinned" type="checkbox"></label>	
+		<br></br>
+		<label>Raideur <input 		onchange="updateSettings();" type="number"				value="3000" 	id="raideur" 	step="0.1"></label>
+		<label>Longueur <input 		onchange="updateSettings();" type="number" 				value="1"   	id="longueur" 	step="0.1"></label>
+		<label>gravité <input 		onchange="updateSettings();" type="number" 				value="0"		id="gravity" 	step="0.1" ></label>
+		<label>Masse <input 		onchange="updateSettings(); updateNodes();" type="number"	value="10"  	id="masse" 		step="1"></label>	
+		<label>Persistance <input 	onchange="updateSettings();" type="number" 				value="0.999"	id="persistance"step="0.001" ></label>	
+		<label>Freinage <input 		onchange="updateSettings();" type="number" 				value="0.0" 	id="freinage" 	step="0.001" ></label>	
+		<br></br>
+		
+		<select id="filter" onchange="updateSettings();">
+			<option>lowpass</option>
+			<option>highpass</option>
+			<option selected>bandpass</option>
+			<option>notch</option>
+		</select>
+		<label>Freq. <input onchange="updateSettings();" type="number" id="freq" value="440" step="10" min="10" max="10000"></label>
+		<label>Q <input onchange="updateSettings();" type="number" id="Q" value="0.25" step="0.1" min="0" max="32"></label>
+		
+		<hr>
+		<canvas id="cnvs" width="1200" height="400" onmouseDown="didClick();" onmouseup="didRelease();" style="width:1200px; height:400px; border:solid black 1px;"></canvas> 
+		<script>
+		
+			window.AudioContext = window.AudioContext || window.webkitAudioContext;
+			var audioContext = new AudioContext();
+			var soundGenerator = null;
+			var vcf = audioContext.createBiquadFilter()
+        	vcf.type = "lowpass";
+    		vcf.frequency.value = 110;
+    		vcf.Q.value = 1;
+			vcf.connect(audioContext.destination);
+			
+			
+			
+			var cnvs = document.getElementById("cnvs");
+			var ctxx = cnvs.getContext("2d");
+			var W = cnvs.width;
+			var H = cnvs.height;
+			
+			var nodes = [];
+			var indices = [];
+			var timeStep = 1/30;
+			
+			var nodeCount, gravity, springStiffness, springLength, masse, persist, friction;
+			var showPoints = true;
+			updateSettings();
+						
+			var mouseX = 0;
+			var mouseY = 0;
+			
+			var isDragging = false;
+			var selectedNode = null;
+			var lastSelectedNode = null;
+			
+			function initWebaudio() {
+			
+				var bufferSize = 512;
+				var pinkNoise = (function() {
+		
+					soundGenerator = audioContext.createScriptProcessor(bufferSize, 1, 2);
+					soundGenerator.onaudioprocess = function(e) {
+						var output = e.outputBuffer.getChannelData(0);
+						var output2 = e.outputBuffer.getChannelData(1);
+						for (var i = 0; i < bufferSize; i++) {
+							output[i] = (nodes[i%nodeCount].y - H/2)/H;
+							output2[i] = (nodes[((bufferSize - i -1)%nodeCount)].y - H/2)/H;
+						}
+					};
+					soundGenerator.connect(vcf);
+				})();
+			}
+			
+			
+			function updateSettings() {
+				nodeCount = Number(document.getElementById("nombre").value);
+				gravity = Number(document.getElementById("gravity").value);
+				springStiffness = Number(document.getElementById("raideur").value);
+				springLength = Number(document.getElementById("longueur").value);
+				masse = Number(document.getElementById("masse").value);
+				persist = Number(document.getElementById("persistance").value);
+				friction = Number(document.getElementById("freinage").value);
+				showPoints = document.getElementById("showPoints").checked;
+				vcf.type = document.getElementById("filter").value;
+				vcf.frequency.value = Number(document.getElementById("freq").value);
+				vcf.Q.value = Number(document.getElementById("Q").value);
+			}
+			
+			
+			function updateNodes() {
+
+				for(var g = 0 ; g < nodeCount ; g++) {
+					var node = nodes[g];
+					node.mass = masse;
+				}
+			}
+			
+			
+			function didClick() {
+				isDragging = true;
+				var found = false;
+				for(var i = 0 ; i < nodeCount ; i++) {
+					var node = nodes[i];
+					var dist = Math.sqrt((node.x-mouseX)*(node.x-mouseX) + (node.y-mouseY)*(node.y-mouseY));
+					if(dist < 10) {
+						found = true;
+						selectedNode = node;
+						lastSelectedNode = node;
+						document.getElementById("pinned").checked = node.pinned;
+						break;
+					}
+				}
+				if(found == false) {
+					selectedNode = null;
+					lastSelectedNode = null;
+					document.getElementById("pinned").checked = false;
+				}
+			}
+			
+			
+			function didRelease() {
+				selectedNode = null;
+				isDragging = false;
+			}
+
+
+			document.addEventListener("mousemove",showMouseXY,true);
+			function showMouseXY(e) {
+				if (typeof(e)=="undefined") {
+					e=event;
+				}
+				var canoffset = $(cnvs).offset();
+				mouseX = (e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - Math.floor(canoffset.left));
+				mouseY = (e.clientY + document.body.scrollTop + document.documentElement.scrollTop - Math.floor(canoffset.top) + 1);
+				
+			}
+			
+			
+			function setPinned(pi) {
+				if(lastSelectedNode != null) {
+					lastSelectedNode.pinned = pi;
+					lastSelectedNode.vx = 0;
+					lastSelectedNode.vy = 0;
+				}	
+			}
+			
+			
+			function Node(nx,ny) {
+				this.x = nx;
+				this.y = ny;
+				this.vx = 0;
+				this.vy = 0;
+				this.mass = masse;
+				this.pinned = false;
+			}
+			
+			
+			function initNodes() {
+				nodes = [];
+				indices = [];
+				for(var i = 0 ; i < nodeCount ; i++) {
+					
+					var x = 20 + (W-40)*i/(nodeCount-1);
+					var y = H/2;
+					var node = new Node(x, y);
+					if(i == 0 || i == (nodeCount-1)) {
+						node.pinned = true;
+					}
+					nodes.push(node);					
+				}
+				for(var j = 0 ; j < nodeCount ; j++) {
+					indices.push(j);
+				}
+				indices = shuffle(indices);
+				indices = shuffle(indices);
+				indices = shuffle(indices);
+			}
+			
+			
+			function shuffle(array) {
+			  var currentIndex = array.length, temporaryValue, randomIndex;
+			  while (0 !== currentIndex) {
+				randomIndex = Math.floor(Math.random() * currentIndex);
+				currentIndex -= 1;
+				temporaryValue = array[currentIndex];
+				array[currentIndex] = array[randomIndex];
+				array[randomIndex] = temporaryValue;
+			  }
+			  return array;
+			}
+
+			
+			function computeForces() {
+				
+				for(var k = 0 ; k < nodeCount ; k++) {
+					var i = indices[k];
+					var node = nodes[i];				
+					if(node.pinned || node==selectedNode) {
+						continue;
+					}
+					
+					var accSumX = 0;
+					var accSumY = 0;
+					var accGravityX = 0;
+					var accGravityY = gravity;
+					
+					accSumX = accGravityX;
+					accSumY = accGravityY;
+					
+					if(i != 0) {
+					
+						var upNode = nodes[i-1];
+						var dupx =  upNode.x - node.x;
+						var dupy = upNode.y - node.y;
+						var upDist = Math.sqrt(dupx*dupx + dupy*dupy);
+						var upForce = springStiffness * Math.abs((upDist - springLength));
+						var upAngle = Math.atan2(dupy, dupx);
+						var accSpringUpX = upForce*Math.cos(upAngle)/node.mass;
+						var accSpringUpY = upForce*Math.sin(upAngle)/node.mass;
+						accSumX = accSumX + accSpringUpX;
+						accSumY = accSumY + accSpringUpY;
+					}
+					
+					if(i != (nodeCount-1)) {
+					
+						var downNode = nodes[i+1];
+						var ddownx = downNode.x - node.x;
+						var ddowny = downNode.y - node.y;
+						var downDist = Math.sqrt(ddownx*ddownx + ddowny*ddowny);
+						var downForce = springStiffness * Math.abs((downDist - springLength));
+						var downAngle = Math.atan2(ddowny, ddownx);
+						var accSpringDownX = downForce*Math.cos(downAngle)/node.mass;
+						var accSpringDownY = downForce*Math.sin(downAngle)/node.mass;
+						accSumX = accSumX + accSpringDownX;
+						accSumY = accSumY + accSpringDownY;
+					}
+					
+					var speed2 = (node.vx*node.vx + node.vy*node.vy);
+					var dir = Math.atan2(node.vy, node.vx);
+					
+					//var frictionX = -friction * speed2 * Math.cos(dir);
+					var frictionY = -friction * speed2 * Math.sin(dir);
+					
+					//accSumX = accSumX + frictionX/node.mass;
+					accSumY = accSumY + frictionY/node.mass;
+					
+					//node.vx = node.vx + accSumX*timeStep;
+					node.vy = node.vy + accSumY*timeStep;			
+					//node.vx = node.vx * persist;
+					node.vy = node.vy * persist; 
+				}
+			}
+			var time = 0;
+			initNodes();
+			initWebaudio();
+			draw();
+			
+			
+			function draw() {
+				
+				ctxx.clearRect(0,0,W,H);
+
+				if(selectedNode !== null && isDragging) {
+					//selectedNode.x = mouseX;
+					selectedNode.y = mouseY;
+				}
+								
+				indices = shuffle(indices);
+				computeForces();
+				indices = shuffle(indices);
+				computeForces();
+				indices = shuffle(indices);
+				computeForces();
+				
+				if(showPoints) {
+					for(var i = 0 ; i < nodeCount ; i++) {
+						var node = nodes[i];
+						ctxx.beginPath();
+						ctxx.arc(node.x, node.y, 3, 0, 2*Math.PI);
+						ctxx.closePath();
+						if(node == selectedNode) {
+							ctxx.fillStyle="red";
+						} else {
+							ctxx.fillStyle="black";
+						}
+						if(node.pinned == true) {
+							ctxx.fillStyle="orange";
+						}
+						ctxx.fill();
+					}
+				}
+
+
+				if(lastSelectedNode !== null) {
+					ctxx.beginPath();
+					ctxx.arc(lastSelectedNode.x, lastSelectedNode.y, 8, 0, 2*Math.PI);
+					ctxx.closePath();
+					ctxx.stroke();
+				}
+				
+				
+				ctxx.beginPath();
+				ctxx.lineWidth = 2;
+				ctxx.lineCap = "round";
+				ctxx.lineJoin = "round";
+				ctxx.moveTo(nodes[0].x, nodes[0].y);
+				for(var i = 0 ; i < nodeCount ; i++) {
+					var node = nodes[i];
+					ctxx.lineTo(node.x, node.y);
+					node.x = node.x + node.vx*timeStep;
+					node.y = node.y + node.vy*timeStep;
+				}
+				ctxx.stroke();
+			
+				time = time + 1/60;
+				requestAnimationFrame(draw);
+			}
+
+		</script>
