@@ -17,9 +17,8 @@
 
 </select>
 <button id="ADD" onclick="addElement(document.getElementById('elementType').value);">Ajouter un élément</button>
-
-
 -->
+
 
 <button onclick="addElement('VCO');">VCO</button>
 <button onclick="addElement('NOISE');">NOISE</button>
@@ -46,10 +45,10 @@
 </div>
 
 <p></p><script id="article_embedded_js" type="text/javascript">window.requestAnimFrame = (function(callback) {
-	return window.requestAnimationFrame || 
-	window.webkitRequestAnimationFrame || 
-	window.mozRequestAnimationFrame || 
-	window.oRequestAnimationFrame || 
+	return window.requestAnimationFrame ||
+	window.webkitRequestAnimationFrame ||
+	window.mozRequestAnimationFrame ||
+	window.oRequestAnimationFrame ||
 	window.msRequestAnimationFrame ||
 	function(callback) {
 		window.setTimeout(callback, 1000 / 60);
@@ -57,7 +56,7 @@
 })();
 
 window.AudioContext = window.AudioContext || window.webkitAudioContext;
- 
+
 var audioContext = new AudioContext();
 
 var outletW = window.devicePixelRatio*20/2;
@@ -85,7 +84,7 @@ function didClick() {
 	    {
 	        element.selected = true;
 	        selectedElement = element;
-	        
+
 	        didSelect = true;
 	        displayParameters(element);
 	    }
@@ -94,8 +93,8 @@ function didClick() {
 	        //element.x + element.w/2, element.y-element.h/2+output*(outletW+4)
 	        var outx = element.x + element.w/2 + outletW/2;
 	        var outy = element.y - element.h/2 + outlet*(outletW+4) + outletW/2;
-	        
-	        if((Math.abs(mouseX - outx) <= (outletW/2)) && 
+
+	        if((Math.abs(mouseX - outx) <= (outletW/2)) &&
 	           (Math.abs(mouseY - outy) <= (outletW/2)))
             {
                 console.log("selected outlet #"+outlet);
@@ -105,7 +104,7 @@ function didClick() {
 	        }
 	    }
 	}
-	
+
 	if(didSelect === false) {
 	    selectedElement = null;
 	    var div = document.getElementById("settings");
@@ -116,14 +115,14 @@ function didClick() {
         message.innerHTML = ("Ajoutez et sélectionnez des éléments...");
         div.appendChild(message);
 	}
-	
+
 	drawAll();
-	
+
 }
 
 function didReleaseClick() {
 	isDragging = false;
-	
+
 	for(var el = 0 ; el < ELEMENTS.length ; el++) {
         var element = ELEMENTS[el];
         for(var inlet = 0 ; inlet < element.inlets.length ; inlet++)
@@ -131,17 +130,17 @@ function didReleaseClick() {
 	        //element.x + element.w/2, element.y-element.h/2+output*(outletW+4)
 	        var inx = element.x - element.w/2 - outletW/2;
 	        var iny = element.y - element.h/2 + inlet*(outletW+4) + outletW/2;
-	        
-	        if((Math.abs(mouseX - inx) <= (outletW/2)) && 
+
+	        if((Math.abs(mouseX - inx) <= (outletW/2)) &&
 	           (Math.abs(mouseY - iny) <= (outletW/2)))
             {
                 console.log("attach to intlet #"+inlet);
                 var sinlet = element.inlets[inlet];
-                
-                
+
+
                 if(sinlet.name == "signal")
                 {
-                    
+
                     if(sourceOutlet.element.name === "SEQ")
                     {
                         // do nothing
@@ -151,11 +150,11 @@ function didReleaseClick() {
                         sourceOutlet.connexions.push(sinlet);
                         sourceOutlet.element.node.connect(sinlet.element.node);
                     }
-                    
+
                 }
                 else if(element.name !== "ADSR" && element.name !== "SEQ")
                 {
-                    
+
                     if(sourceOutlet.element.name !== "SEQ")
                     {
                         sourceOutlet.connexions.push(sinlet);
@@ -168,24 +167,24 @@ function didReleaseClick() {
                         sourceOutlet.element.oscillatorFrequencyInletForSeq = sinlet;
                         console.log("should connect "+sourceOutlet.name+"");
                     }
-                    
+
                 }
                 else
                 {
-                    
+
                     if(element.name === "ADSR" && sourceOutlet.element.name === "SEQ" && sinlet.name==="note_on")
                     {
                         sourceOutlet.connexions.push(sinlet);
                         console.log("connect SEQ to ADSR");
                         sourceOutlet.element.target = sinlet.element.node;
-                        
+
                         var srcel = sourceOutlet.element;
                         sourceOutlet.element.triggerTimer = function (node, src) {
-                            setTimeout(function(){ 
+                            setTimeout(function(){
                                 if(node !== null) {
                                     src.step = (src.step+1)%16;
                                     if(src.beats[src.step] === true) {
-                                        
+
                                         var note = src.notes[src.step];
                                         var freq = frequencyWithNote(note);
                                         if(src.oscillatorNodeForSeq !== null)
@@ -197,7 +196,7 @@ function didReleaseClick() {
                                         node.trig();
                                     }
                                     src.triggerTimer(node, src);
-                                } 
+                                }
                             }, 1000*(60.0/src.tempo));
                         };
                         sourceOutlet.element.triggerTimer(sinlet.element.node, srcel);
@@ -244,7 +243,7 @@ function showMouseXY(e) {
 	var canoffset = $(cnvs).offset();
 	mouseX = window.devicePixelRatio*(e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - Math.floor(canoffset.left));
 	mouseY = window.devicePixelRatio*(e.clientY + document.body.scrollTop + document.documentElement.scrollTop - Math.floor(canoffset.top) + 1);
-	
+
 	if(isDragging === true && selectedElement !== null)
 	{
 	    selectedElement.x = mouseX;
@@ -261,7 +260,7 @@ function Element(x,y,w,h, name, node)
     this.y = y;
     this.w = w;
     this.h = h;
-    this.inlets = []; 
+    this.inlets = [];
     this.outlets = [];
     this.settings = [];
     this.selected = false;
@@ -270,7 +269,7 @@ function Element(x,y,w,h, name, node)
     this.addOutlet = function(outlet) {this.outlets.push(outlet)};
     this.addSetting = function(setting) {this.settings.push(setting)};
     this.node = node;
-    
+
     this.index = -1;
     this.kind = 0; //0 = audioNode object // 1 = custom object like sequencer
     this.step = 0;
@@ -320,9 +319,9 @@ function addElement(type) {
         osc.type = "sine";
     	osc.frequency.value = 440;
     	osc.start(0);
-    	
+
     	element = new Element(200,200,boxW,boxH,"VCO", osc);
-        
+
         var frequency = new Inlet(element, "frequency", 20,10000, 440, osc.frequency);
         element.addInlet(frequency);
         var signal = new Outlet(element, "signal");
@@ -336,7 +335,7 @@ function addElement(type) {
         lfo.type = "sine";
     	lfo.frequency.value = 1;
     	lfo.start(0);
-    	
+
         element = new Element(200,200,boxW,boxH,"LFO", lfo);
         var frequency = new Inlet(element, "frequency", 0.01,10, 1, lfo.frequency);
         element.addInlet(frequency);
@@ -354,13 +353,13 @@ function addElement(type) {
         for (var i = 0; i < bufferSize; i++) {
             output[i] = Math.random() * 2 - 1;
         }
-    
+
         var whiteNoise = audioContext.createBufferSource();
         whiteNoise.buffer = noiseBuffer;
         whiteNoise.loop = true;
         whiteNoise.start(0);
         */
-        
+
         var bufferSize = 4096;
         var pinkNoise = (function() {
             var b0, b1, b2, b3, b4, b5, b6;
@@ -385,10 +384,10 @@ function addElement(type) {
         })();
 
         element = new Element(200,200,boxW,boxH,"NOISE", pinkNoise);
-        
+
         var signal = new Outlet(element, "signal");
         element.addOutlet(signal);
-        
+
     }
     if(type === "VCF")
     {
@@ -406,23 +405,23 @@ function addElement(type) {
         element.addInlet(Q);
         var signal = new Outlet(element, "signal");
         element.addOutlet(signal);
-        
+
         var setting = new Setting(element, "type", ["lowpass", "highpass", "bandpass", "notch"], "bandpass", vcf.type);
         element.addSetting(setting);
-        
+
     }
     if(type === "ADSR")
     {
-        
+
     	var gain = audioContext.createGain();
     	gain.gain.value = 0.0;
     	gain.attack = 0.05;
     	gain.decay = 0.3;
     	gain.sustain = 0.5;
     	gain.release = 0.5;
-    	
+
     	gain.trig = function() {
-    	    
+
     	    var now = audioContext.currentTime;
     		this.gain.cancelScheduledValues( now );
     		this.gain.value = 0.0;
@@ -438,14 +437,14 @@ function addElement(type) {
         var decay = new Inlet(element, "decay", 0, 1, 0.3, gain.decay);
         var sustain = new Inlet(element, "sustain", 0, 1, 0.5, gain.sustain);
         var release = new Inlet(element, "release", 0, 1, 0.5, gain.release);
-        
+
         element.addInlet(signal);
         element.addInlet(note_on);
         element.addInlet(attack);
         element.addInlet(decay);
         element.addInlet(sustain);
         element.addInlet(release);
-        
+
         var signal = new Outlet(element, "signal");
         element.addOutlet(signal);
     }
@@ -453,11 +452,11 @@ function addElement(type) {
     {
         var gain = audioContext.createGain();
     	gain.gain.value = 0.0;
-    	
+
         element = new Element(200,200,boxW,boxH,"VCA_LO", gain);
         var signal = new Inlet(element, "signal",-1,1,0, null);
         var gain = new Inlet(element, "gain",-2,2,1, gain.gain);
-        
+
         element.addInlet(signal);
         element.addInlet(gain);
 
@@ -468,11 +467,11 @@ function addElement(type) {
     {
         var gain = audioContext.createGain();
     	gain.gain.value = 0.0;
-    	
+
         element = new Element(200,200,boxW,boxH,"VCA_HI", gain);
         var signal = new Inlet(element, "signal",-1,1,0, null);
         var gain = new Inlet(element, "gain",0,1000,1, gain.gain);
-        
+
         element.addInlet(signal);
         element.addInlet(gain);
 
@@ -483,11 +482,11 @@ function addElement(type) {
     {
         var gain = audioContext.createGain();
     	gain.gain.value = 1.0;
-    	
+
         element = new Element(200,200,boxW,boxH,"MIX", gain);
         var signal = new Inlet(element, "signal",-1,1,0, null);
         var gain = new Inlet(element, "gain",0,1,1, gain.gain);
-        
+
         element.addInlet(signal);
         element.addInlet(gain);
 
@@ -497,28 +496,28 @@ function addElement(type) {
     {
         element = new Element(200,200,boxW,boxH,"SEQ", gain);
         element.kind = 1;
-        
+
         var tempo = new Inlet(element, "tempo",20,800,60, null);
         element.addInlet(tempo);
         element.tempo = 60;
         var signal = new Outlet(element, "trig");
         element.addOutlet(signal);
-        
+
         var frequency = new Outlet(element, "frequency");
         element.addOutlet(frequency);
-        
-        
+
+
         element.beats = [true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true];
         element.notes = ["A","A","A","A","A","A","A","A","A","A","A","A","A","A","A","A"];
         element.target = null;
     }
 
-    
-    
-    
+
+
+
     element.h = Math.max(element.h, element.inlets.length*(outletW+4))
     element.h = Math.max(element.h, element.outlets.length*(outletW+4))
-    
+
     element.index = ELEMENTS.length;
     ELEMENTS.push(element);
     drawAll();
@@ -528,15 +527,15 @@ function addElement(type) {
 function addPattern(patternName) {
 	addElement("VCO");
 	ELEMENTS.push(element);
-		
+
 	addElement("VCA_HI");
-		
+
 	addElement("VCO");
-	
+
 	addElement("VCF");
-	
+
 	addElement("MIX");
-	
+
 }
 
 function deleteElement()
@@ -547,22 +546,22 @@ function deleteElement()
             var element = ELEMENTS[el];
             if(element.index == selectedElement.index) {
                 console.log("delete element #"+element.index+" "+element.name);
-                
+
                 for(var i = 0 ; i < element.inlets.length ; i++)  {
                     var inl = element.inlets[i];
-                                
+
                     for(var l = 0 ; l < ELEMENTS.length ; l++)
                     {
                         var tel = ELEMENTS[l];
-                        
+
                         if(tel !== element) {
                             if(tel.outlets.length>0)
                             {
                                 var outlet = tel.outlets[0];
-                            
+
                                 var connexions = outlet.connexions; // assuming there is only 1 outlet.
                                 for(var c = (connexions.length-1) ; c >= 0 ; c--)
-                                {   
+                                {
                                     var outConnexionInlet = connexions[c];
                                     if(outConnexionInlet === inl) {
                                         console.log(outConnexionInlet);
@@ -577,7 +576,7 @@ function deleteElement()
                 {
                     element.node.disconnect();
                 }
-                
+
                 selectedElement = null;
                 ELEMENTS.splice(el, 1);
                 drawAll()
@@ -601,36 +600,36 @@ function drawAll() {
             ctxx.fillStyle = "rgba(255,200,0,1)";
         }
         ctxx.fill();
-        
+
         ctxx.font = (window.devicePixelRatio*30/2)+"px Arial";
         ctxx.fillText(element.name,element.x - element.w/2, element.y - element.h/2 - 4);
 
         //ctxx.stroke();
-        for(var input = 0 ; input < element.inlets.length ; input++) 
+        for(var input = 0 ; input < element.inlets.length ; input++)
         {
             ctxx.beginPath();
             ctxx.rect(element.x - element.w/2 - outletW, element.y-element.h/2+input*(outletW+4), outletW, outletW);
             ctxx.fillStyle = "rgba(0,0,0,1)";
-            
+
             ctxx.fill();
-            
+
             ctxx.font = (window.devicePixelRatio*16/2)+"px Arial";
             ctxx.fillText(element.inlets[input].name,element.x - element.w/2 + 5, element.y-element.h/2+input*(outletW+4)+outletW-2);
         }
-        for(var output = 0 ; output < element.outlets.length ; output++) 
+        for(var output = 0 ; output < element.outlets.length ; output++)
         {
             ctxx.beginPath();
             ctxx.rect(element.x + element.w/2, element.y-element.h/2+output*(outletW+4), outletW, outletW);
             ctxx.fillStyle = "rgba(0,0,0,1)";
             ctxx.fill();
-            
+
             if(element.name === "SEQ" && element.outlets[output].name === "frequency")
             {
                 ctxx.font = (window.devicePixelRatio*16/2)+"px Arial";
                 ctxx.fillText("freq" ,element.x +10 , element.y-element.h/2+input*(outletW+4)+outletW-2);
             }
-            
-            
+
+
         }
         if(isDragging === true && sourceOutlet !== null)
         {
@@ -642,7 +641,7 @@ function drawAll() {
             ctxx.lineTo(mouseX, mouseY);
             ctxx.stroke();
         }
-        
+
         for(var o = 0; o < element.outlets.length ; o++)
         {
             var outl = element.outlets[o];
@@ -650,24 +649,24 @@ function drawAll() {
             {
                 var inl = outl.connexions[c];
                 var inlElem = inl.element;
-                
+
                 ctxx.beginPath();
                 var elem = outl.element;
                 var outx = element.x + element.w/2 + outletW/2;
     	        var outy = element.y - element.h/2 + (element.outlets.indexOf(outl))*(outletW+4) + outletW/2;
-    	        
+
     	        var inx = inlElem.x - inlElem.w/2 - outletW/2;
     	        var iny = inlElem.y - inlElem.h/2 + (inlElem.inlets.indexOf(inl))*(outletW+4) + outletW/2;
-    	        
+
                 ctxx.moveTo(outx, outy);
                 ctxx.lineTo(inx, iny);
                 ctxx.stroke();
-                
-                
+
+
             }
         }
     }
-    
+
 }
 
 function frequencyWithNote(note)
@@ -685,7 +684,7 @@ function frequencyWithNote(note)
     if (note === "F#") return 440 * Math.pow(2,(9+octave*12)/12);
     if (note === "G" )return 440 *  Math.pow(2,(10+octave*12)/12);
     if (note === "G#") return 440 * Math.pow(2,(11+octave*12)/12);
-    
+
     return 100;
 }
 
@@ -700,13 +699,13 @@ function displayParameters(element)
         var button = document.createElement("BUTTON");
         button.myElement = element;
         button.innerHTML = "TRIG";
-        button.addEventListener("click", function() 
+        button.addEventListener("click", function()
         {
-            console.log("click"); 
+            console.log("click");
             this.myElement.node.gain.value = 0.0;
             this.myElement.node.trig();
         });
-            
+
         div.appendChild(button);
         div.appendChild(document.createElement("br"));
     }
@@ -715,7 +714,7 @@ function displayParameters(element)
         for(var b = 0 ; b < element.beats.length ; b++)
         {
             var state = element.beats[b];
-            var note = element.notes[b]; 
+            var note = element.notes[b];
             // F = Math.pow(2,n/12);
             var checker = document.createElement("input");
             checker.setAttribute("type", "checkbox");
@@ -728,9 +727,9 @@ function displayParameters(element)
                 this.myElement.beats[this.beatIndex] = this.checked;
             });
             checker.style.marginRight = "5px";
-            
+
             var noteSelect = document.createElement("select");
- 
+
             noteSelect.setAttribute("id", "notes");
             noteSelect.myElement = element;
             noteSelect.beatIndex = b;
@@ -740,23 +739,23 @@ function displayParameters(element)
             for(var sn = 0 ; sn < nts.length ; sn++)
             {
                 var snote = nts[sn];
-                
+
                 var sfreq = frequencyWithNote(snote);
-                
+
                 var sinput = document.createElement("option");
                 sinput.setAttribute("name", snote);
                 sinput.setAttribute("value", sfreq);
                 sinput.innerHTML = snote;
-                
+
                 noteSelect.appendChild(sinput);
-                
+
                 if(snote === note)
                 {
                     console.log("selected note = "+note);
                     selectedIndex = sn;
                 }
-            
-                
+
+
             }
             noteSelect.options.selectedIndex = selectedIndex;
             noteSelect.addEventListener("input", function() {
@@ -768,11 +767,11 @@ function displayParameters(element)
             {
                 div.appendChild(document.createElement("br"));
             }
-            
+
         }
         div.appendChild(document.createElement("br"));
-        
-        
+
+
     }
     for(var i = 0 ; i < element.inlets.length ; i++)
     {
@@ -780,8 +779,8 @@ function displayParameters(element)
         if(inl.name !== "signal")
         {
             div.appendChild(document.createTextNode(inl.name));
-            
-            
+
+
             var slide = document.createElement("INPUT");
             slide.setAttribute("type", "range");
             slide.setAttribute("value", inl.value);
@@ -791,7 +790,7 @@ function displayParameters(element)
             slide.setAttribute("step", 0.01);
             slide.myInlet = inl;
             slide.addEventListener("input", function() {
-                console.log("update "+this.id+" to "+this.value); 
+                console.log("update "+this.id+" to "+this.value);
                 this.myInlet.value = this.value;
                 document.getElementById(this.id+"num").value = this.value;
                 if(element.name === "ADSR")
@@ -806,11 +805,11 @@ function displayParameters(element)
                 {
                     this.myInlet.param.value = this.value;
                 }
-                
+
             });
             div.appendChild(slide);
             slide.setAttribute("value", inl.value);
-            
+
             var numfield = document.createElement("INPUT");
             numfield.setAttribute("type", "number");
             numfield.setAttribute("value", inl.value);
@@ -820,7 +819,7 @@ function displayParameters(element)
             numfield.setAttribute("step", 0.01);
             numfield.myInlet = inl;
             numfield.addEventListener("input", function() {
-                console.log("update "+this.id+" to "+this.value); 
+                console.log("update "+this.id+" to "+this.value);
                 document.getElementById(inl.name).value = this.value;
                 this.myInlet.value = this.value;
                 if(element.name === "ADSR")
@@ -835,12 +834,12 @@ function displayParameters(element)
                 {
                     this.myInlet.param.value = this.value;
                 }
-                
+
             });
             div.appendChild(numfield);
             numfield.setAttribute("value", inl.value);
-            
-            
+
+
         }
     }
     for(var s = 0 ; s < element.settings.length ; s++)
@@ -854,7 +853,7 @@ function displayParameters(element)
         div.appendChild(sel);
         var selectedIndex = -1;
         for(var v = 0 ; v < sett.values.length ; v++)
-        {   
+        {
             var opt = document.createElement("option");
             opt.setAttribute("name", sett.values[v]);
             opt.setAttribute("value", sett.values[v]);
