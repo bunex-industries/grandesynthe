@@ -1,0 +1,323 @@
+	<br>
+		<button onClick="initWebaudio();" style="background-color:cyan;">Start Audio</button>
+		<br>
+		<label>Nombre <input onchange="resetGenerators(); N=Number(this.value); initRope();" type="number" id="nombre" value="16" step="1" min="2" max="60"></label>
+		<br><br>
+		<select id="filter" onchange="updateSettings();">
+			<option selected>lowpass</option>
+			<option>highpass</option>
+			<option>bandpass</option>
+			<option>notch</option>
+		</select>
+		<label>Freq. <input onchange="updateSettings();" type="number" id="freq" value="1760" step="10" min="10" max="10000"></label>
+		<label>Q <input onchange="updateSettings();" type="number" id="Q" value="1" step="0.1" min="0" max="32"></label>
+		<select id="mode" onchange="updateSettings();">
+			<option selected>position X => fréquence, position Y => gain</option>
+			<option>vitesse Y => gain, position Y => fréquence</option>
+			<option>vitesse => gain, direction => fréquence</option>
+			<option>vitesse Y => gain, positionX => fréquence</option>
+			<option>vitesse => fréquence et gain</option>
+		</select>
+		<br>
+		<hr>
+		
+		<canvas id="cnvs" width="900" height="500" onmousedown="didClick();" onmouseup="didRelease();" style="width:900px; height:500px; border:solid black 1px;"></canvas>
+		
+		<script>
+			window.AudioContext = window.AudioContext || window.webkitAudioContext;
+			var	audioContext = new AudioContext();	
+			 function initWebaudio() {
+				audioContext.resume();
+				updateGenerators();
+			}	
+			
+			
+			var N = 16;
+			var mode = 0;
+			var vcf = audioContext.createBiquadFilter()
+			vcf.type = "lowpass";
+			vcf.frequency.value = 1760.0;
+			vcf.Q.value = 1.0;
+			vcf.gain.value = 0.10;
+			vcf.connect(audioContext.destination);
+				
+			var cnvs = document.getElementById("cnvs");		
+			var ctxx = cnvs.getContext("2d");
+			var W = cnvs.width;
+			var H = cnvs.height;
+			var mouseX = 0;
+			var mouseY = 0;
+			var isDragging = false;
+			var selectedPoint = null;
+			
+			function resetGenerators() {
+				
+				for(var ii = 0 ; ii < corde.points.length ; ii++) {
+					var ppt = corde.points[ii];
+					
+					ppt.osc.disconnect();
+					ppt.osc.stop();
+					ppt.gain.disconnect();
+					
+					ppt.osc = null;
+					ppt.gain = null;
+				}
+				
+				corde.points = [];
+				corde.sticks = [];
+			}
+			function Point(x,y,ox,oy,p,o,g) {
+				this.x = x;
+				this.y = y;
+				this.ox = ox;
+				this.oy = oy;
+				this.pinned = p;
+				this.osc = o;
+				this.gain = g;
+			}
+			
+			function Stick(p0,p1) {
+				this.p0 = p0;
+				this.p1 = p1;
+				this.length = 10;
+				this.calculateLength = function() {
+					this.length = Math.sqrt((this.p0.x-this.p1.x)*(this.p0.x-this.p1.x) + (this.p0.y-this.p1.y)*(this.p0.y-this.p1.y));
+				};
+			}
+			
+			function Corde() {
+				this.points = [];
+				this.sticks = [];
+			}
+			
+			function didClick() {
+				isDragging = true;
+				var found = false;
+
+				for(var ii = 0 ; ii < corde.points.length ; ii++) {
+					var ppt = corde.points[ii];
+					var dist = Math.sqrt((ppt.x-mouseX)*(ppt.x-mouseX) + (ppt.y-mouseY)*(ppt.y-mouseY));
+					if(dist < 10) {
+						found = true;
+						selectedPoint = ppt;
+						break;
+					}
+				}
+				if(found == false) {
+					selectedPoint = null;
+				}
+				
+			}
+			function didRelease() {
+				isDragging = false;
+			}
+
+			document.addEventListener("mousemove",showMouseXY,true);
+			function showMouseXY(e) {
+				if (typeof(e)=="undefined") {
+					e=event;
+				}
+				var canoffset = $(cnvs).offset();
+				mouseX = (e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft - Math.floor(canoffset.left));
+				mouseY = (e.clientY + document.body.scrollTop + document.documentElement.scrollTop - Math.floor(canoffset.top) + 1);
+						
+			}
+			
+			
+			function freqForNote(n) {
+				return 110 * Math.pow(1.059463, n);
+			}
+			
+			function updateSettings() {
+				vcf.type = document.getElementById("filter").value;
+				vcf.frequency.value = Number(document.getElementById("freq").value);
+				vcf.Q.value = Number(document.getElementById("Q").value);
+				
+				mode = document.getElementById("mode").selectedIndex;
+			}
+						
+			
+			var corde = new Corde();		
+			initRope();
+			
+			function initRope() {
+				for(var i = 0 ; i < N ; i++) {
+					var sine = audioContext.createOscillator();
+					sine.frequency.value = freqForNote(i);
+					sine.type = "sine";
+				
+				
+					var gain = audioContext.createGain();
+					gain.gain.value = 1/N;
+				
+					sine.connect(gain);
+					sine.start();
+					gain.connect(vcf);	
+
+					var pt = new Point(10+(W-120)*i/N, H/2, 10+(W-120)*i/N, H/2, false, sine, gain);
+					
+					if(i == 0 || i == (N-1)) {
+						pt.pinned = true;
+					}
+					corde.points.push(pt);				
+					if(i>0) {
+						var stck = new Stick(corde.points[i-1], pt);
+						stck.calculateLength();
+						corde.sticks.push(stck);
+						
+					}				
+				}
+			}
+			
+			
+			function updatePoints() {
+				
+				for(var i = 0 ; i < N ; i++) {
+					var pt = corde.points[i];
+					
+					if(pt.pinned == false && (pt!=selectedPoint || isDragging == false)) {
+						
+						var vx = pt.x - pt.ox;
+						var vy = pt.y - pt.oy;			
+					
+						pt.ox = pt.x;
+						pt.oy = pt.y;
+					
+						pt.x = pt.x + vx*0.999;
+						pt.y = pt.y + vy*0.999;
+						
+					}
+					if(pt==selectedPoint && isDragging) {
+						
+						var dddx = mouseX - pt.x;
+						var dddy = mouseY - pt.y;
+						
+						pt.ox = pt.x;
+						pt.oy = pt.y;
+					
+						pt.x = pt.x + 0.5*dddx;
+						pt.y = pt.y + 0.5*dddy;
+					}
+					
+					if(mode == 0) {
+						pt.gain.gain.value = Math.min(1.0, Math.max(-1.0, 0.1*(pt.y-H/2)/(H/2)));
+						pt.osc.frequency.value = Math.min(10000.0, Math.max(0, 50+5000*pt.x/W));
+					} 
+					else if(mode == 1) {
+						var vy = Math.abs(pt.y - pt.oy);
+						pt.gain.gain.value = Math.min(0.2, 0.1*Math.max(vy));
+						pt.osc.frequency.value = Math.min(10000.0, Math.max(0, 50+5000*pt.y/H));
+					}
+					else if(mode == 2) {
+						var vx = pt.x - pt.ox;
+						var vy = pt.y - pt.oy;
+						var freq = 50 + 5000*(Math.atan2(vy,vx) + Math.PI)/(2*Math.PI);
+						var speed = Math.sqrt(vx*vx + vy*vy);
+						pt.gain.gain.value = Math.min(0.2, 0.1*Math.max(speed));
+						pt.osc.frequency.value = freq;
+					}
+					else if(mode == 3) {
+						
+						var vy = Math.abs(pt.y - pt.oy);
+						pt.gain.gain.value = Math.min(0.2, 0.1*Math.max(vy));
+						pt.osc.frequency.value = Math.min(10000.0, Math.max(0, 50+5000*pt.x/W));
+					}
+					else if(mode == 4) {
+						
+						var vx = pt.x - pt.ox;
+						var vy = pt.y - pt.oy;
+						var speed = Math.sqrt(vx*vx + vy*vy);
+						pt.gain.gain.value = Math.min(0.2, 0.1*Math.max(speed));
+						pt.osc.frequency.value = Math.min(10000, Math.max(50, 100*speed));
+
+					}
+				}
+			}
+			
+			function updateSticks() {
+				for(var s = 0 ; s<corde.sticks.length ; s++) {
+					var stick = corde.sticks[s];
+					var dx = stick.p1.x - stick.p0.x;
+					var dy = stick.p1.y - stick.p0.y;
+					var dist = Math.sqrt(dx*dx + dy*dy);
+					var t = 0.5 * (dist - stick.length)/stick.length;
+					
+					if(stick.p0.pinned == false) {
+						stick.p0.x = stick.p0.x + 0.5*t*dx;
+						stick.p0.y = stick.p0.y + 0.5*t*dy;
+					}
+					
+					if(stick.p1.pinned == false) {
+						stick.p1.x = stick.p1.x - 0.5*t*dx;
+						stick.p1.y = stick.p1.y - 0.5*t*dy;
+					}
+				}
+			}
+			
+			function constrainPoints() {
+				for(var p = 0 ; p<corde.points.length ; p++) {
+					var ppt = corde.points[p];
+
+					if(ppt.pinned == false) {
+						var vx = ppt.x - ppt.ox;
+						var vy = ppt.y - ppt.oy;			
+					
+					
+						if(ppt.x > W) {
+							ppt.x = W;
+							ppt.ox = ppt.x+vx;
+						}
+						else if(ppt.x < 0) {
+							ppt.x = 0;
+							ppt.ox = ppt.x+vx;
+						}
+						if(ppt.y > H) {
+							ppt.y = H;
+							ppt.oy = ppt.y+vy;
+						}
+						else if(ppt.y < 0) {
+							ppt.y = 0;
+							ppt.oy = ppt.y+vy;
+						}
+					}
+				}
+			}
+					
+			function render() {
+				ctxx.beginPath();
+				ctxx.moveTo(corde.points[0].x, corde.points[0].y);
+				for(var i = 1 ; i<N ; i++) {
+					ctxx.lineTo(corde.points[i].x, corde.points[i].y);
+				}
+				ctxx.stroke();
+				
+				for(var i = 0; i<N ; i++) {
+					ctxx.beginPath();
+					ctxx.arc(corde.points[i].x, corde.points[i].y, 4, 0, 2*Math.PI);
+					ctxx.fillStyle = "black"
+					if(corde.points[i].pinned) {
+						ctxx.fillStyle = "red";
+					}
+					if(corde.points[i] == selectedPoint) {
+						ctxx.fillStyle = "green";
+					}
+					ctxx.fill();
+				}
+			}
+			
+			function updateGenerators() {
+				
+				ctxx.clearRect(0,0,W,H);
+				
+				updatePoints();
+				for(var k = 0 ; k<20 ; k++) {
+					updateSticks();
+					constrainPoints();
+				}
+				
+				render();
+				
+				requestAnimationFrame(updateGenerators);
+			}
+			
+		</script>
