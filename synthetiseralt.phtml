@@ -527,16 +527,19 @@ function addElement(type) {
 
 function addPattern(patternName) {
 	addElement("VCO");
-	ELEMENTS.push(element);
+	var vco1 = ELEMENTS[ELEMENTS.length -1]; 
 		
 	addElement("VCA_HI");
-		
+	var vca1 = ELEMENTS[ELEMENTS.length -1];
+	
 	addElement("VCO");
+	var vco2 = ELEMENTS[ELEMENTS.length -1];
 	
 	addElement("VCF");
+	var vcf1 = ELEMENTS[ELEMENTS.length -1];
 	
 	addElement("MIX");
-	
+	var mix1 = ELEMENTS[ELEMENTS.length -1];
 }
 
 function deleteElement()
